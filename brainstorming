@@ -1,0 +1,45 @@
+Alright, the theme is water.
+
+Before I sat down here I went through a few ideas, so I cheated just a little.
+
+The idea I ended up for is witching for water in the desert.
+
+For a moment I was thinking I might do a DOOM style UI, but for simplicity and stuff I think I've decided to do a standard 2.5D top-down thing.
+
+So, the gist is that you're in a desert and looking for water wells.
+That's about as far as I got while laying in bed.
+
+I think you should get a hot-cold dynamic for the witching.
+Like, if you took absolute distance from the nearest well, applied some sort of a hockey stick function to it, so that everything more than N units away was all "cold".
+Then, as you get closer, all of the distance increments are important.
+
+Anyway, so, that could be represented either by a bar, or by a color swatch that goes from white to blue.
+
+The next mechanic, I think, is that you get thirsty as you're searching, so you have to either find some water, or return to the last well you dug.
+
+Oh Oh!
+It's a maze.
+An invisible maze.
+
+So, the code generates a maze with you at one point, and civilization at the other.
+Or an oasis.
+Whatever.
+Then it puts the wells some random distance apart from each other, but within your thirst traveling distance.
+But, there's only one path of wells that will get you to the end, and some other paths have dead ends, but you don't know that until you can't find a well anywhere from it.
+Then you need to backtrack looking for another well some other place.
+
+The maze generation can come towards the end.
+
+Steps:
+- Have a block walking around a yellow field.
+- Have visible wells, with some sort of distance gauge.
+- Make the well inviisble until you dig them up
+- Have your thirst decrease constantly while you're walking around
+  Hmm, good question. Do I want it to decrease with time, or with motion?
+  If I'm just standing there... does it go down, go down by less, or stay where it is.
+  I think digging should take up more thirst if it wasn't on a well.
+- Maybe have the sand change colour when you attempt to dig it up, but it's not a well.
+- Make graphics for the guy.
+- Make them walk.
+- Make random variations in the sand, so it's not a solid yellow block.
+- SoundFX
