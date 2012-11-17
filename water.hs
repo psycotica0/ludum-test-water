@@ -15,7 +15,7 @@ import Control.Monad.Trans.Class (lift)
 import Prelude hiding ((.))
 import Control.Category ((.))
 
-import Data.Lens.Common (lens)
+import Data.Lens.Common (lens, getL)
 import Data.Lens.Lazy ((~=), access, (%=))
 
 tile_width = 16
@@ -23,6 +23,8 @@ tile_height = 16
 
 x_tiles = 24
 y_tiles = 16
+
+--- START DATA TYPES ---
 
 data Position = Position Int Int
 
@@ -61,28 +63,53 @@ setPlayer player (GameState screen format _) = GameState screen format player
 
 player = lens getPlayer setPlayer
 
+--- END DATA TYPES ---
+
+-- This function returns a rect that represents the tile referenced by pos
+get_rect :: Position -> Rect
+get_rect pos = Rect (tile_width * ((getL x pos) - 1)) (tile_height * ((getL y pos) - 1)) tile_width tile_height
+
+-- This function returns the color of sand, given stuff...
 sand_color :: StateT GameState IO Pixel
 sand_color = do
 	f <- access format
 	lift $ mapRGB f 255 169 95
 
+-- Until I have an icon for the player, this will represent them
+player_color :: StateT GameState IO Pixel
+player_color = do
+	f <- access format
+	lift $ mapRGB f 0 0 0
+
+-- This sets up the initial stuff
 setup :: StateT GameState IO ()
 setup = do
 	s <- lift $ setVideoMode (x_tiles * tile_width) (y_tiles * tile_height) 32 [SWSurface]
 	screen ~= s
 	format ~= surfaceGetPixelFormat s
-	color <- sand_color
-	lift $ fillRect s (Just (Rect 0 0 (surfaceGetWidth s) (surfaceGetHeight s))) color
-	lift $ V.flip s
 	return ()
 
+-- This is the event handler...
 handle_event :: Event -> StateT GameState IO ()
 handle_event Quit = return ()
 handle_event _ = main_loop
 
+-- This function takes care of the rendering
+render :: StateT GameState IO ()
+render = do
+	s <- access screen
+	bg_color <- sand_color
+	p_color <- player_color
+	lift $ fillRect s Nothing bg_color
+	-- Now we draw the player
+	pos <- access (position.player)
+	lift $ fillRect s (Just (get_rect pos)) p_color
+	lift $ V.flip s
+
+-- This is the main loop
 main_loop :: StateT GameState IO ()
 main_loop = do
-	-- Normally we'd do stuff here...
+	render
 	event <- lift waitEvent
 	handle_event event
 
