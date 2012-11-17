@@ -24,18 +24,42 @@ tile_height = 16
 x_tiles = 24
 y_tiles = 16
 
-data GameState = GameState Surface PixelFormat
-initial_game_state = GameState undefined undefined
+data Position = Position Int Int
 
-getScreen (GameState screen _) = screen
-setScreen screen (GameState _ format) = GameState screen format
+getX (Position x _) = x
+setX x (Position _ y) = Position x y
+
+x = lens getX setX
+
+getY (Position _ y) = y
+setY y (Position x _) = Position x y
+
+y = lens getY setY
+
+data Player = Player Position
+
+getPosition (Player pos) = pos
+setPosition pos (Player _) = Player pos
+
+position = lens getPosition setPosition
+
+data GameState = GameState Surface PixelFormat Player
+initial_game_state = GameState undefined undefined (Player (Position 1 1))
+
+getScreen (GameState screen _ _) = screen
+setScreen screen (GameState _ format player) = GameState screen format player
 
 screen = lens getScreen setScreen
 
-getFormat (GameState _ format) = format
-setFormat format (GameState screen _) = GameState screen format
+getFormat (GameState _ format _) = format
+setFormat format (GameState screen _ player) = GameState screen format player
 
 format = lens getFormat setFormat
+
+getPlayer (GameState _ _ player) = player
+setPlayer player (GameState screen format _) = GameState screen format player
+
+player = lens getPlayer setPlayer
 
 sand_color :: StateT GameState IO Pixel
 sand_color = do
