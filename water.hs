@@ -46,23 +46,45 @@ setPosition pos (Player _) = Player pos
 
 position = lens getPosition setPosition
 
-data GameState = GameState Surface PixelFormat Player
-initial_game_state = GameState undefined undefined (Player (Position 1 1))
+data Colors = Colors Pixel Pixel Pixel
 
-getScreen (GameState screen _ _) = screen
-setScreen screen (GameState _ format player) = GameState screen format player
+getSand (Colors sand _ _) = sand
+setSand sand (Colors _ player water) = Colors sand player water
+
+sand = lens getSand setSand
+
+getPlayerColor (Colors _ player _) = player
+setPlayerColor player (Colors sand _ water) = Colors sand player water
+
+player_color = lens getPlayerColor setPlayerColor
+
+getWater (Colors _ _ water) = water
+setWater water (Colors sand player _) = Colors sand player water
+
+water = lens getWater setWater
+
+data GameState = GameState Surface PixelFormat Player Colors
+initial_game_state = GameState undefined undefined (Player (Position 1 1)) (Colors undefined undefined undefined)
+
+getScreen (GameState screen _ _ _) = screen
+setScreen screen (GameState _ format player colors) = GameState screen format player colors
 
 screen = lens getScreen setScreen
 
-getFormat (GameState _ format _) = format
-setFormat format (GameState screen _ player) = GameState screen format player
+getFormat (GameState _ format _ _) = format
+setFormat format (GameState screen _ player colors) = GameState screen format player colors
 
 format = lens getFormat setFormat
 
-getPlayer (GameState _ _ player) = player
-setPlayer player (GameState screen format _) = GameState screen format player
+getPlayer (GameState _ _ player _) = player
+setPlayer player (GameState screen format _ colors) = GameState screen format player colors
 
 player = lens getPlayer setPlayer
+
+getColors (GameState _ _ _ colors ) = colors
+setColors colors (GameState screen format player _) = GameState screen format player colors
+
+colors = lens getColors setColors
 
 --- END DATA TYPES ---
 
@@ -70,24 +92,19 @@ player = lens getPlayer setPlayer
 get_rect :: Position -> Rect
 get_rect pos = Rect (tile_width * ((getL x pos) - 1)) (tile_height * ((getL y pos) - 1)) tile_width tile_height
 
--- This function returns the color of sand, given stuff...
-sand_color :: StateT GameState IO Pixel
-sand_color = do
-	f <- access format
-	lift $ mapRGB f 255 169 95
-
--- Until I have an icon for the player, this will represent them
-player_color :: StateT GameState IO Pixel
-player_color = do
-	f <- access format
-	lift $ mapRGB f 0 0 0
-
 -- This sets up the initial stuff
 setup :: StateT GameState IO ()
 setup = do
 	s <- lift $ setVideoMode (x_tiles * tile_width) (y_tiles * tile_height) 32 [SWSurface]
 	screen ~= s
 	format ~= surfaceGetPixelFormat s
+	f <- access format
+	sc <- lift $ mapRGB f 255 169 95
+	(sand.colors) ~= sc
+	pc <- lift $ mapRGB f 0 0 0
+	(player_color.colors) ~= pc
+	wc <- lift $ mapRGB f 0 0 255
+	(water.colors) ~= wc
 	return ()
 
 -- This is the event handler...
@@ -103,8 +120,8 @@ handle_event _ = main_loop
 render :: StateT GameState IO ()
 render = do
 	s <- access screen
-	bg_color <- sand_color
-	p_color <- player_color
+	bg_color <- access (sand.colors)
+	p_color <- access (player_color.colors)
 	lift $ fillRect s Nothing bg_color
 	-- Now we draw the player
 	pos <- access (position.player)
