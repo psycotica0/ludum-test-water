@@ -5,7 +5,8 @@ import Graphics.UI.SDL.Color (Pixel)
 import qualified Graphics.UI.SDL.Video as V (flip)
 
 import Graphics.UI.SDL.WindowManagement (setCaption)
-import Graphics.UI.SDL.Events (Event(Quit), waitEvent)
+import Graphics.UI.SDL.Events (Event(Quit, KeyDown), waitEvent)
+import Graphics.UI.SDL.Keysym (Keysym(Keysym), SDLKey(SDLK_UP, SDLK_DOWN, SDLK_LEFT,SDLK_RIGHT))
 
 import Graphics.UI.SDL.Rect (Rect(Rect))
 
@@ -15,7 +16,7 @@ import Control.Monad.Trans.Class (lift)
 import Prelude hiding ((.))
 import Control.Category ((.))
 
-import Data.Lens.Common (lens, getL)
+import Data.Lens.Common (lens, getL, modL)
 import Data.Lens.Lazy ((~=), access, (%=))
 
 tile_width = 16
@@ -92,6 +93,10 @@ setup = do
 -- This is the event handler...
 handle_event :: Event -> StateT GameState IO ()
 handle_event Quit = return ()
+handle_event (KeyDown (Keysym SDLK_UP _ _)) = ((y.position.player) %= ((flip (-)) 1)) >> main_loop
+handle_event (KeyDown (Keysym SDLK_DOWN _ _)) = ((y.position.player) %= (+1)) >> main_loop
+handle_event (KeyDown (Keysym SDLK_LEFT _ _)) = ((x.position.player) %= ((flip (-)) 1)) >> main_loop
+handle_event (KeyDown (Keysym SDLK_RIGHT _ _)) = ((x.position.player) %= (+1)) >> main_loop
 handle_event _ = main_loop
 
 -- This function takes care of the rendering
