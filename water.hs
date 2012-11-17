@@ -16,7 +16,7 @@ import Control.Monad.Trans.Class (lift)
 import Prelude hiding ((.))
 import Control.Category ((.))
 
-import Data.Lens.Common (lens, getL, modL)
+import Data.Lens.Common (Lens, lens, getL, modL)
 import Data.Lens.Lazy ((~=), access, (%=))
 
 tile_width = 16
@@ -88,6 +88,12 @@ colors = lens getColors setColors
 
 --- END DATA TYPES ---
 
+-- This function is for binding a value into a lens
+(~<-) :: (Monad m) => Lens a b -> StateT a m b -> StateT a m b
+lens ~<- func = do
+	value <- func
+	lens ~= value
+
 -- This function returns a rect that represents the tile referenced by pos
 get_rect :: Position -> Rect
 get_rect pos = Rect (tile_width * ((getL x pos) - 1)) (tile_height * ((getL y pos) - 1)) tile_width tile_height
@@ -99,12 +105,9 @@ setup = do
 	screen ~= s
 	format ~= surfaceGetPixelFormat s
 	f <- access format
-	sc <- lift $ mapRGB f 255 169 95
-	(sand.colors) ~= sc
-	pc <- lift $ mapRGB f 0 0 0
-	(player_color.colors) ~= pc
-	wc <- lift $ mapRGB f 0 0 255
-	(water.colors) ~= wc
+	(sand.colors) ~<- (lift $ mapRGB f 255 169 95)
+	(player_color.colors) ~<- (lift $ mapRGB f 0 0 0)
+	(water.colors) ~<- (lift $ mapRGB f 0 0 255)
 	return ()
 
 -- This is the event handler...
