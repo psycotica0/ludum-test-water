@@ -91,8 +91,7 @@ colors = lens getColors setColors
 -- This function is for binding a value into a lens
 (~<-) :: (Monad m) => Lens a b -> StateT a m b -> StateT a m b
 lens ~<- func = do
-	value <- func
-	lens ~= value
+	(lens ~=) =<< func
 
 -- This function returns a rect that represents the tile referenced by pos
 get_rect :: Position -> Rect
