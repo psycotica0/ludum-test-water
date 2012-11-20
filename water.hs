@@ -19,6 +19,8 @@ import Control.Category ((.))
 import Data.Lens.Common (Lens, lens, getL, modL)
 import Data.Lens.Lazy ((~=), access, (%=))
 
+import Data.Function (on)
+
 tile_width = 16
 tile_height = 16
 
@@ -38,6 +40,19 @@ getY (Position _ y) = y
 setY y (Position x _) = Position x y
 
 y = lens getY setY
+
+data Well = Well Bool Position
+
+getWellPosition (Well _ pos) = pos
+setWellPosition pos (Well found _) = Well found pos
+
+well_position = lens getWellPosition setWellPosition
+
+getFound (Well found _) = found
+setFound found (Well _ pos) = Well found pos
+
+found = lens getFound setFound
+
 
 data Player = Player Position
 
@@ -63,39 +78,47 @@ setWater water (Colors sand player _) = Colors sand player water
 
 water = lens getWater setWater
 
-data GameState = GameState Surface PixelFormat Player Colors
-initial_game_state = GameState undefined undefined (Player (Position 1 1)) (Colors undefined undefined undefined)
+data GameState = GameState Surface PixelFormat Player Colors [Well]
+initial_game_state = GameState undefined undefined (Player (Position 1 1)) (Colors undefined undefined undefined) []
 
-getScreen (GameState screen _ _ _) = screen
-setScreen screen (GameState _ format player colors) = GameState screen format player colors
+getScreen (GameState screen _ _ _ _) = screen
+setScreen screen (GameState _ format player colors wells) = GameState screen format player colors wells
 
 screen = lens getScreen setScreen
 
-getFormat (GameState _ format _ _) = format
-setFormat format (GameState screen _ player colors) = GameState screen format player colors
+getFormat (GameState _ format _ _ _) = format
+setFormat format (GameState screen _ player colors wells) = GameState screen format player colors wells
 
 format = lens getFormat setFormat
 
-getPlayer (GameState _ _ player _) = player
-setPlayer player (GameState screen format _ colors) = GameState screen format player colors
+getPlayer (GameState _ _ player _ _) = player
+setPlayer player (GameState screen format _ colors wells) = GameState screen format player colors wells
 
 player = lens getPlayer setPlayer
 
-getColors (GameState _ _ _ colors ) = colors
-setColors colors (GameState screen format player _) = GameState screen format player colors
+getColors (GameState _ _ _ colors _) = colors
+setColors colors (GameState screen format player _ wells) = GameState screen format player colors wells
 
 colors = lens getColors setColors
+
+getWells (GameState _ _ _ _ wells) = wells
+setWells wells (GameState screen format player colors _) = GameState screen format player colors wells
+
+wells = lens getWells setWells
 
 --- END DATA TYPES ---
 
 -- This function is for binding a value into a lens
 (~<-) :: (Monad m) => Lens a b -> StateT a m b -> StateT a m b
-lens ~<- func = do
-	(lens ~=) =<< func
+lens ~<- func = (lens ~=) =<< func
 
 -- This function returns a rect that represents the tile referenced by pos
 get_rect :: Position -> Rect
 get_rect pos = Rect (tile_width * ((getL x pos) - 1)) (tile_height * ((getL y pos) - 1)) tile_width tile_height
+
+-- This function returns the manhattan distance between two points
+distance :: Position -> Position -> Int
+distance pos1 pos2 = (on (\x y -> abs (x-y)) (getL x) pos1 pos2) + (on (\x y -> abs (x-y)) (getL y) pos1 pos2)
 
 -- This sets up the initial stuff
 setup :: StateT GameState IO ()
@@ -107,6 +130,7 @@ setup = do
 	(sand.colors) ~<- (lift $ mapRGB f 255 169 95)
 	(player_color.colors) ~<- (lift $ mapRGB f 0 0 0)
 	(water.colors) ~<- (lift $ mapRGB f 0 0 255)
+	wells ~= [Well True (Position 5 5)]
 	return ()
 
 -- This is the event handler...
@@ -124,7 +148,11 @@ render = do
 	s <- access screen
 	bg_color <- access (sand.colors)
 	p_color <- access (player_color.colors)
+	w_color <- access (water.colors)
 	lift $ fillRect s Nothing bg_color
+	-- Now we draw all of the visible wells
+	wells <- access (wells)
+	lift $ mapM (\p -> fillRect s (Just (get_rect p)) w_color) $ map (getL (well_position)) $ filter (getL found) wells
 	-- Now we draw the player
 	pos <- access (position.player)
 	lift $ fillRect s (Just (get_rect pos)) p_color
