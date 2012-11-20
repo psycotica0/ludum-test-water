@@ -24,6 +24,8 @@ import Data.Function (on)
 import Data.Ord.HT (limit)
 import Data.Bool.HT (select, if')
 
+import GHC.Word (Word8)
+
 import Game.Water.Datatypes
 
 tile_width = 16
@@ -31,6 +33,13 @@ tile_height = 16
 
 x_tiles = 24
 y_tiles = 16
+
+-- If your thirst gets to this level, you die
+thirst_max = 10
+-- This is how much thirst it costs to move
+thirst_cost_move = 1
+-- This is how much thirst it costs to dig (if you fail to find a well)
+thirst_cost_dig = 5
 
 -- This returns a rectangle representing the playing area, ignoring the status_bar
 playing_area = Rect 0 (tile_height) (x_tiles * tile_width) (y_tiles * y_tiles)
@@ -53,6 +62,13 @@ inset_rect (Rect cx cy cw ch) fraction = Rect (cx + border_width) (cy + border_h
 -- This function returns the manhattan distance between two points
 distance :: Position -> Position -> Int
 distance pos1 pos2 = (on (\x y -> abs (x-y)) (getL x) pos1 pos2) + (on (\x y -> abs (x-y)) (getL y) pos1 pos2)
+
+-- This returns True if the player is on a found well, or False otherwise
+standing_on_well :: StateT GameState IO Bool
+standing_on_well = do
+	pos <- access (position.player)
+	wells <- access (wells)
+	return $ or $ map (\well -> (getL found well) && ((getL well_position well) == pos)) wells
 
 -- This sets up the initial stuff
 setup :: StateT GameState IO ()
@@ -99,11 +115,26 @@ distance_swatch_color = do
 	wells <- access (wells)
 	distance_color $ minimum $ map ((distance p).(getL well_position)) wells
 
--- Draw Distance Swatch of the given color
-draw_distance_swatch :: Pixel -> StateT GameState IO Bool
-draw_distance_swatch color = do
+-- This function returns the intensity given a thirst
+thirst_color :: Int -> Word8
+thirst_color input = 255 - ((fromIntegral input) * step)
+	where
+	step = 255 `div` thirst_max
+
+-- This function returns the color of the thirst swatch
+thirst_swatch_color :: StateT GameState IO Pixel
+thirst_swatch_color = do
+	f <- access format
+	trst <- access (thirst.player)
+	lift $ (\c -> mapRGB f c c c) $ thirst_color trst
+
+-- This draws a swatch in the given position (1 being first)
+draw_swatch :: Int -> Pixel -> StateT GameState IO Bool
+draw_swatch index color = do
 	s <- access screen
-	lift $ fillRect s (Just $ inset_rect (get_rect $ Position 1 0) 4) color
+	lift $ fillRect s (Just $ inset_rect (get_rect $ Position index 0) 4) color
+
+
 
 -- This function takes care of the rendering
 render :: StateT GameState IO ()
@@ -120,7 +151,9 @@ render = do
 	pos <- access (position.player)
 	lift $ fillRect s (Just (get_rect pos)) p_color
 	-- Now do the distance swatch
-	draw_distance_swatch =<< distance_swatch_color
+	(draw_swatch 1) =<< distance_swatch_color
+	-- And the thirst swatch
+	(draw_swatch 2) =<< thirst_swatch_color
 	lift $ V.flip s
 
 -- This is the main loop

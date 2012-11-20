@@ -1,6 +1,6 @@
 module Game.Water.Datatypes (Position(Position), x, y,
 	Well(Well), well_position, found,
-	Player(Player), position,
+	Player(Player), position, thirst,
 	Colors(Colors), sand, player_color, water,
 	GameState(GameState), screen, format, player, colors, wells,
 	initial_game_state,
@@ -34,13 +34,17 @@ setFound found (Well _ pos) = Well found pos
 
 found = lens getFound setFound
 
+data Player = Player Position Int
 
-data Player = Player Position
-
-getPosition (Player pos) = pos
-setPosition pos (Player _) = Player pos
+getPosition (Player pos _) = pos
+setPosition pos (Player _ trst) = Player pos trst
 
 position = lens getPosition setPosition
+
+getThirst (Player _ trst) = trst
+setThirst trst (Player pos _) = Player pos trst
+
+thirst = lens getThirst setThirst
 
 data Colors = Colors Pixel Pixel Pixel
 
@@ -60,7 +64,7 @@ setWater water (Colors sand player _) = Colors sand player water
 water = lens getWater setWater
 
 data GameState = GameState Surface PixelFormat Player Colors [Well]
-initial_game_state = GameState undefined undefined (Player (Position 1 1)) (Colors undefined undefined undefined) []
+initial_game_state = GameState undefined undefined (Player (Position 1 1) 0) (Colors undefined undefined undefined) []
 
 getScreen (GameState screen _ _ _ _) = screen
 setScreen screen (GameState _ format player colors wells) = GameState screen format player colors wells
