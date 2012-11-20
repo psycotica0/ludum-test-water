@@ -163,7 +163,15 @@ render = do
 
 -- This is the game_over loop
 -- Right now it just quits
-game_over = return ()
+game_over = do
+	s <- access screen
+	f <- access format
+	over_color <- lift $ mapRGB f 255 0 0
+	lift $ fillRect s (Just playing_area) over_color
+	lift $ V.flip s
+	-- Might as well use the same event loop
+	quit <- (handle_event =<< lift waitEvent)
+	if' quit (return ()) game_over
 
 -- This is the main loop
 main_loop :: StateT GameState IO ()
