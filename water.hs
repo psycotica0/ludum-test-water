@@ -99,7 +99,6 @@ distance_swatch_color = do
 draw_distance_swatch :: Pixel -> StateT GameState IO Bool
 draw_distance_swatch color = do
 	s <- access screen
-	-- TODO: This should be based on tile_width and tile_height
 	lift $ fillRect s (Just $ inset_rect (get_rect $ Position 1 0) 4) color
 
 -- This function takes care of the rendering
