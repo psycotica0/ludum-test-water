@@ -21,6 +21,8 @@ import Data.Lens.Lazy ((~=), access, (%=))
 
 import Data.Function (on)
 
+import Data.Ord.HT (limit)
+
 tile_width = 16
 tile_height = 16
 
@@ -133,13 +135,16 @@ setup = do
 	wells ~= [Well True (Position 5 5)]
 	return ()
 
+x_plus v = (limit (1, x_tiles)).(+v)
+y_plus v = (limit (1, y_tiles)).(+v)
+
 -- This is the event handler...
 handle_event :: Event -> StateT GameState IO ()
 handle_event Quit = return ()
-handle_event (KeyDown (Keysym SDLK_UP _ _)) = ((y.position.player) %= ((flip (-)) 1)) >> main_loop
-handle_event (KeyDown (Keysym SDLK_DOWN _ _)) = ((y.position.player) %= (+1)) >> main_loop
-handle_event (KeyDown (Keysym SDLK_LEFT _ _)) = ((x.position.player) %= ((flip (-)) 1)) >> main_loop
-handle_event (KeyDown (Keysym SDLK_RIGHT _ _)) = ((x.position.player) %= (+1)) >> main_loop
+handle_event (KeyDown (Keysym SDLK_UP _ _)) = ((y.position.player) %= (y_plus (-1))) >> main_loop
+handle_event (KeyDown (Keysym SDLK_DOWN _ _)) = ((y.position.player) %= (y_plus 1)) >> main_loop
+handle_event (KeyDown (Keysym SDLK_LEFT _ _)) = ((x.position.player) %= (x_plus (-1))) >> main_loop
+handle_event (KeyDown (Keysym SDLK_RIGHT _ _)) = ((x.position.player) %= (x_plus 1)) >> main_loop
 handle_event _ = main_loop
 
 -- This function takes care of the rendering
