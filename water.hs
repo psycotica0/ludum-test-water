@@ -90,20 +90,20 @@ move_y v = ((y.position.player) %= (limit (1, y_tiles)).(+v)) >> consume_move_th
 move_x v = ((x.position.player) %= (limit (1, x_tiles)).(+v)) >> consume_move_thirst
 
 -- This is the event handler...
-handle_event :: Event -> StateT GameState IO ()
-handle_event Quit = return ()
-handle_event (KeyDown (Keysym SDLK_UP _ _)) = (move_y (-1)) >> main_loop
-handle_event (KeyDown (Keysym SDLK_DOWN _ _)) = (move_y 1) >> main_loop
-handle_event (KeyDown (Keysym SDLK_LEFT _ _)) = (move_x (-1)) >> main_loop
-handle_event (KeyDown (Keysym SDLK_RIGHT _ _)) = (move_x 1) >> main_loop
+handle_event :: Event -> StateT GameState IO Bool
+handle_event Quit = return True
+handle_event (KeyDown (Keysym SDLK_UP _ _)) = (move_y (-1)) >> (return False)
+handle_event (KeyDown (Keysym SDLK_DOWN _ _)) = (move_y 1) >> (return False)
+handle_event (KeyDown (Keysym SDLK_LEFT _ _)) = (move_x (-1)) >> (return False)
+handle_event (KeyDown (Keysym SDLK_RIGHT _ _)) = (move_x 1) >> (return False)
 handle_event (KeyDown (Keysym SDLK_SPACE _ _)) = do
 	pos <- access (position.player)
 	wells %= (map (\well -> if' ((getL well_position well) == pos) (setL found True well) well))
 	on_well <- standing_on_well
 	-- If we're currently on a well, do nothing, otherwise we just dug unsucessfully and should be docked thirst
 	(thirst.player) %= (if' on_well id (+thirst_cost_dig))
-	main_loop
-handle_event _ = main_loop
+	return False
+handle_event _ = return False
 
 -- This function takes a distance and makes a color from it
 distance_color :: Int -> StateT GameState IO Pixel
@@ -161,6 +161,10 @@ render = do
 	(draw_swatch 2) =<< thirst_swatch_color
 	lift $ V.flip s
 
+-- This is the game_over loop
+-- Right now it just quits
+game_over = return ()
+
 -- This is the main loop
 main_loop :: StateT GameState IO ()
 main_loop = do
@@ -169,6 +173,9 @@ main_loop = do
 	(thirst.player) %= if' on_well (const 0) id
 	render
 	event <- lift waitEvent
-	handle_event event
+	quit <- handle_event event
+	trst <- access (thirst.player)
+	-- If the user quit, return. If thirst is over max, game_over, otherwise loop
+	select main_loop [(quit, return ()), (trst > thirst_max, game_over)]
 
 main = withInit [InitVideo, InitEventthread] $ (>>) (setCaption "Water Game" "") $ (flip runStateT) initial_game_state (setup >> main_loop)
