@@ -123,9 +123,10 @@ distance_swatch_color = do
 
 -- This function returns the intensity given a thirst
 thirst_color :: Int -> Word8
-thirst_color input = 255 - ((fromIntegral input) * step)
+thirst_color raw_input = 255 - (input * step)
 	where
-	step = 255 `div` thirst_max
+	step = 255 `div` (fromIntegral thirst_max)
+	input = fromIntegral $ limit (0,thirst_max) raw_input
 
 -- This function returns the color of the thirst swatch
 thirst_swatch_color :: StateT GameState IO Pixel
