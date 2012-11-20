@@ -22,6 +22,7 @@ import Data.Lens.Lazy ((~=), access, (%=))
 import Data.Function (on)
 
 import Data.Ord.HT (limit)
+import Data.Bool.HT (select)
 
 import Game.Water.Datatypes
 
@@ -71,6 +72,29 @@ handle_event (KeyDown (Keysym SDLK_LEFT _ _)) = ((x.position.player) %= (x_plus 
 handle_event (KeyDown (Keysym SDLK_RIGHT _ _)) = ((x.position.player) %= (x_plus 1)) >> main_loop
 handle_event _ = main_loop
 
+-- This function takes a distance and makes a color from it
+distance_color :: Int -> StateT GameState IO Pixel
+distance_color v = access format >>= (\x -> lift $ mapRGB x 0 0 $ select 0 [
+	(v == 0, 255),
+	(v < 3, 180),
+	(v < 5, 100)
+	])
+
+-- This function returns the color the Distance Swatch should be. 
+-- It does this by finding the distance to the closest well, then turning that into a color
+distance_swatch_color :: StateT GameState IO Pixel
+distance_swatch_color = do
+	p <- access (position.player)
+	wells <- access (wells)
+	distance_color $ minimum $ map ((distance p).(getL well_position)) wells
+
+-- Draw Distance Swatch of the given color
+draw_distance_swatch :: Pixel -> StateT GameState IO Bool
+draw_distance_swatch color = do
+	s <- access screen
+	-- TODO: This should be based on tile_width and tile_height
+	lift $ fillRect s (Just $ Rect 2 2 12 12) color
+
 -- This function takes care of the rendering
 render :: StateT GameState IO ()
 render = do
@@ -85,6 +109,8 @@ render = do
 	-- Now we draw the player
 	pos <- access (position.player)
 	lift $ fillRect s (Just (get_rect pos)) p_color
+	-- Now do the distance swatch
+	draw_distance_swatch =<< distance_swatch_color
 	lift $ V.flip s
 
 -- This is the main loop
