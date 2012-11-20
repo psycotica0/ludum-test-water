@@ -83,19 +83,25 @@ setup = do
 	wells ~= [Well False (Position 5 5)]
 	return ()
 
-x_plus v = (limit (1, x_tiles)).(+v)
-y_plus v = (limit (1, y_tiles)).(+v)
+consume_move_thirst = (thirst.player) %= (+thirst_cost_move)
+
+-- These function move the player in the given axis, and consume the proper amount of thirst
+move_y v = ((y.position.player) %= (limit (1, y_tiles)).(+v)) >> consume_move_thirst
+move_x v = ((x.position.player) %= (limit (1, x_tiles)).(+v)) >> consume_move_thirst
 
 -- This is the event handler...
 handle_event :: Event -> StateT GameState IO ()
 handle_event Quit = return ()
-handle_event (KeyDown (Keysym SDLK_UP _ _)) = ((y.position.player) %= (y_plus (-1))) >> main_loop
-handle_event (KeyDown (Keysym SDLK_DOWN _ _)) = ((y.position.player) %= (y_plus 1)) >> main_loop
-handle_event (KeyDown (Keysym SDLK_LEFT _ _)) = ((x.position.player) %= (x_plus (-1))) >> main_loop
-handle_event (KeyDown (Keysym SDLK_RIGHT _ _)) = ((x.position.player) %= (x_plus 1)) >> main_loop
+handle_event (KeyDown (Keysym SDLK_UP _ _)) = (move_y (-1)) >> main_loop
+handle_event (KeyDown (Keysym SDLK_DOWN _ _)) = (move_y 1) >> main_loop
+handle_event (KeyDown (Keysym SDLK_LEFT _ _)) = (move_x (-1)) >> main_loop
+handle_event (KeyDown (Keysym SDLK_RIGHT _ _)) = (move_x 1) >> main_loop
 handle_event (KeyDown (Keysym SDLK_SPACE _ _)) = do
 	pos <- access (position.player)
 	wells %= (map (\well -> if' ((getL well_position well) == pos) (setL found True well) well))
+	on_well <- standing_on_well
+	-- If we're currently on a well, do nothing, otherwise we just dug unsucessfully and should be docked thirst
+	(thirst.player) %= (if' on_well id (+thirst_cost_dig))
 	main_loop
 handle_event _ = main_loop
 
@@ -134,8 +140,6 @@ draw_swatch index color = do
 	s <- access screen
 	lift $ fillRect s (Just $ inset_rect (get_rect $ Position index 0) 4) color
 
-
-
 -- This function takes care of the rendering
 render :: StateT GameState IO ()
 render = do
@@ -159,6 +163,9 @@ render = do
 -- This is the main loop
 main_loop :: StateT GameState IO ()
 main_loop = do
+	on_well <- standing_on_well
+	-- If we're on a well, reset the thirst. Otherwise leave it
+	(thirst.player) %= if' on_well (const 0) id
 	render
 	event <- lift waitEvent
 	handle_event event
