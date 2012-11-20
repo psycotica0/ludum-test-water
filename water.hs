@@ -31,13 +31,16 @@ tile_height = 16
 x_tiles = 24
 y_tiles = 16
 
+-- This returns a rectangle representing the playing area, ignoring the status_bar
+playing_area = Rect 0 (tile_height) (x_tiles * tile_width) (y_tiles * y_tiles)
+
 -- This function is for binding a value into a lens
 (~<-) :: (Monad m) => Lens a b -> StateT a m b -> StateT a m b
 lens ~<- func = (lens ~=) =<< func
 
 -- This function returns a rect that represents the tile referenced by pos
 get_rect :: Position -> Rect
-get_rect pos = Rect (tile_width * ((getL x pos) - 1)) (tile_height * ((getL y pos) - 1)) tile_width tile_height
+get_rect pos = Rect (tile_width * ((getL x pos) - 1)) (tile_height * (getL y pos)) tile_width tile_height
 
 -- This function returns the manhattan distance between two points
 distance :: Position -> Position -> Int
@@ -46,7 +49,7 @@ distance pos1 pos2 = (on (\x y -> abs (x-y)) (getL x) pos1 pos2) + (on (\x y -> 
 -- This sets up the initial stuff
 setup :: StateT GameState IO ()
 setup = do
-	s <- lift $ setVideoMode (x_tiles * tile_width) (y_tiles * tile_height) 32 [SWSurface]
+	s <- lift $ setVideoMode (x_tiles * tile_width) ((y_tiles + 1) * tile_height) 32 [SWSurface]
 	screen ~= s
 	format ~= surfaceGetPixelFormat s
 	f <- access format
@@ -75,7 +78,7 @@ render = do
 	bg_color <- access (sand.colors)
 	p_color <- access (player_color.colors)
 	w_color <- access (water.colors)
-	lift $ fillRect s Nothing bg_color
+	lift $ fillRect s (Just playing_area) bg_color
 	-- Now we draw all of the visible wells
 	wells <- access (wells)
 	lift $ mapM (\p -> fillRect s (Just (get_rect p)) w_color) $ map (getL (well_position)) $ filter (getL found) wells
