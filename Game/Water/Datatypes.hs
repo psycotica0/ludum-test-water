@@ -10,7 +10,7 @@ import Data.Lens.Common (lens)
 import Graphics.UI.SDL.Types (Surface, PixelFormat)
 import Graphics.UI.SDL.Color (Pixel)
 
-data Position = Position Int Int
+data Position = Position Int Int deriving Eq
 
 getX (Position x _) = x
 setX x (Position _ y) = Position x y

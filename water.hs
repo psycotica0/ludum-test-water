@@ -6,7 +6,7 @@ import qualified Graphics.UI.SDL.Video as V (flip)
 
 import Graphics.UI.SDL.WindowManagement (setCaption)
 import Graphics.UI.SDL.Events (Event(Quit, KeyDown), waitEvent)
-import Graphics.UI.SDL.Keysym (Keysym(Keysym), SDLKey(SDLK_UP, SDLK_DOWN, SDLK_LEFT,SDLK_RIGHT))
+import Graphics.UI.SDL.Keysym (Keysym(Keysym), SDLKey(SDLK_UP, SDLK_DOWN, SDLK_LEFT,SDLK_RIGHT, SDLK_SPACE))
 
 import Graphics.UI.SDL.Rect (Rect(Rect))
 
@@ -16,13 +16,13 @@ import Control.Monad.Trans.Class (lift)
 import Prelude hiding ((.))
 import Control.Category ((.))
 
-import Data.Lens.Common (Lens, lens, getL, modL)
+import Data.Lens.Common (Lens, lens, getL, modL, setL)
 import Data.Lens.Lazy ((~=), access, (%=))
 
 import Data.Function (on)
 
 import Data.Ord.HT (limit)
-import Data.Bool.HT (select)
+import Data.Bool.HT (select, if')
 
 import Game.Water.Datatypes
 
@@ -64,7 +64,7 @@ setup = do
 	(sand.colors) ~<- (lift $ mapRGB f 255 169 95)
 	(player_color.colors) ~<- (lift $ mapRGB f 0 0 0)
 	(water.colors) ~<- (lift $ mapRGB f 0 0 255)
-	wells ~= [Well True (Position 5 5)]
+	wells ~= [Well False (Position 5 5)]
 	return ()
 
 x_plus v = (limit (1, x_tiles)).(+v)
@@ -77,6 +77,10 @@ handle_event (KeyDown (Keysym SDLK_UP _ _)) = ((y.position.player) %= (y_plus (-
 handle_event (KeyDown (Keysym SDLK_DOWN _ _)) = ((y.position.player) %= (y_plus 1)) >> main_loop
 handle_event (KeyDown (Keysym SDLK_LEFT _ _)) = ((x.position.player) %= (x_plus (-1))) >> main_loop
 handle_event (KeyDown (Keysym SDLK_RIGHT _ _)) = ((x.position.player) %= (x_plus 1)) >> main_loop
+handle_event (KeyDown (Keysym SDLK_SPACE _ _)) = do
+	pos <- access (position.player)
+	wells %= (map (\well -> if' ((getL well_position well) == pos) (setL found True well) well))
+	main_loop
 handle_event _ = main_loop
 
 -- This function takes a distance and makes a color from it
