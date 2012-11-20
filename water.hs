@@ -43,6 +43,13 @@ lens ~<- func = (lens ~=) =<< func
 get_rect :: Position -> Rect
 get_rect pos = Rect (tile_width * ((getL x pos) - 1)) (tile_height * (getL y pos)) tile_width tile_height
 
+-- This function insets a rectangle, given a denominator to use as a fraction
+inset_rect :: Rect -> Int -> Rect
+inset_rect (Rect cx cy cw ch) fraction = Rect (cx + border_width) (cy + border_height) (cw - (2 * border_width)) (ch - (2 * border_height))
+	where
+	border_width = cw `div` fraction
+	border_height = ch `div` fraction
+
 -- This function returns the manhattan distance between two points
 distance :: Position -> Position -> Int
 distance pos1 pos2 = (on (\x y -> abs (x-y)) (getL x) pos1 pos2) + (on (\x y -> abs (x-y)) (getL y) pos1 pos2)
@@ -93,7 +100,7 @@ draw_distance_swatch :: Pixel -> StateT GameState IO Bool
 draw_distance_swatch color = do
 	s <- access screen
 	-- TODO: This should be based on tile_width and tile_height
-	lift $ fillRect s (Just $ Rect 2 2 12 12) color
+	lift $ fillRect s (Just $ inset_rect (get_rect $ Position 1 0) 4) color
 
 -- This function takes care of the rendering
 render :: StateT GameState IO ()
