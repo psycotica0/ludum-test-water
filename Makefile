@@ -7,5 +7,7 @@ water: water.hs
 
 clean:
 	$(RM) *.o
+	$(RM) Game/Water/*.o
 	$(RM) *.hi
+	$(RM) Game/Water/*.hi
 	$(RM) water
