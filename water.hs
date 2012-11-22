@@ -1,3 +1,4 @@
+module Main where
 import Graphics.UI.SDL.General (withInit, InitFlag(InitVideo, InitEventthread))
 import Graphics.UI.SDL.Types (Surface, SurfaceFlag(SWSurface), surfaceGetPixelFormat, surfaceGetHeight, surfaceGetWidth, PixelFormat)
 import Graphics.UI.SDL.Video (setVideoMode, mapRGB, fillRect)
@@ -26,6 +27,8 @@ import Data.Bool.HT (select, if')
 
 import GHC.Word (Word8)
 
+import System.Random (randomR, mkStdGen, StdGen)
+
 import Game.Water.Datatypes
 
 tile_width = 16
@@ -40,6 +43,9 @@ thirst_max = 10
 thirst_cost_move = 1
 -- This is how much thirst it costs to dig (if you fail to find a well)
 thirst_cost_dig = 5
+-- This is the thirst cost between nodes that's considered fair
+-- I've made it thirst_max / 2, so you should be able to almost get there, then back, without dying
+thirst_cost_fair = thirst_max `div` (2 * thirst_cost_move)
 
 -- This returns a rectangle representing the playing area, ignoring the status_bar
 playing_area = Rect 0 (tile_height) (x_tiles * tile_width) (y_tiles * y_tiles)
@@ -70,6 +76,19 @@ standing_on_well = do
 	wells <- access (wells)
 	return $ or $ map (\well -> (getL found well) && ((getL well_position well) == pos)) wells
 
+-- This function returns whether one can get from anywhere in the set to the end node
+-- The rules for "reachability" is that there's some chain where no two nodes are over thirst_cost_fair apart.
+-- This should hopefully yield a "fair" path.
+-- This is a stable state function, so assume that every item in chain is reachable from start
+pos_reachable :: Position -> ([Position] -> Bool)
+pos_reachable end = or . map (\i -> (distance i end < thirst_cost_fair))
+
+-- This function generates new random, unique, reachable positions until the end is reachable
+build_well_positions :: StdGen -> Position -> [Position] -> [Position]
+build_well_positions gen end cur_positions = if' (pos_reachable end cur_positions) cur_positions $ build_well_positions gen' end $ if' (pos_reachable new_pos cur_positions) (new_pos:cur_positions) cur_positions
+	where
+	(new_pos, gen') = randomR (Position 1 1, Position x_tiles y_tiles) gen
+
 -- Important Wells
 starting_well = Well True (Position 1 1)
 ending_well = Well True (Position x_tiles y_tiles)
@@ -86,7 +105,7 @@ setup = do
 	(water.colors) ~<- (lift $ mapRGB f 0 0 255)
 	(position.player) ~= getL (well_position) starting_well
 	-- Set the starting and the ending well
-	wells ~= [starting_well, ending_well]
+	wells ~= (map (Well False) $ build_well_positions (mkStdGen 1) (getL well_position ending_well) $ [(getL well_position starting_well)])
 	return ()
 
 consume_move_thirst = (thirst.player) %= (+thirst_cost_move)

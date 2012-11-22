@@ -10,6 +10,8 @@ import Data.Lens.Common (lens)
 import Graphics.UI.SDL.Types (Surface, PixelFormat)
 import Graphics.UI.SDL.Color (Pixel)
 
+import System.Random (Random, randomR, random)
+
 data Position = Position Int Int deriving Eq
 
 getX (Position x _) = x
@@ -21,6 +23,10 @@ getY (Position _ y) = y
 setY y (Position x _) = Position x y
 
 y = lens getY setY
+
+instance Random Position where
+	random g = let (n1, g') = random g; (n2, g'') = random g'; in (Position n1 n2, g'')
+	randomR (Position lx ly, Position hx hy) g = let (n1, g') = randomR (lx, hx) g; (n2, g'') = randomR (ly, hy) g'; in (Position n1 n2, g'')
 
 data Well = Well Bool Position
 
