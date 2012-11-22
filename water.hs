@@ -203,8 +203,13 @@ game_over = do
 	lift $ fillRect s (Just playing_area) over_color
 	lift $ V.flip s
 	-- Might as well use the same event loop
-	quit <- (handle_event =<< lift waitEvent)
-	if' quit (return ()) game_over
+	lift wait_to_quit
+
+wait_to_quit :: IO ()
+wait_to_quit = waitEvent >>= is_quit
+	where
+	is_quit Quit = return ()
+	is_quit _ = wait_to_quit
 
 -- This is the main loop
 main_loop :: StateT GameState IO ()
