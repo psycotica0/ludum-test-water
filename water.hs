@@ -89,6 +89,14 @@ build_well_positions gen end cur_positions = if' (pos_reachable end cur_position
 	where
 	(new_pos, gen') = randomR (Position 1 1, Position x_tiles y_tiles) gen
 
+build_wells :: StdGen -> Well -> Well -> [Well]
+build_wells gen start end = map (\pos -> Well (visible pos) pos) (end_pos:positions)
+	where
+	start_pos = getL well_position start
+	end_pos = getL well_position end
+	positions = build_well_positions gen end_pos [start_pos]
+	visible pos = if' (pos == start_pos || pos == end_pos) True False
+
 -- Important Wells
 starting_well = Well True (Position 1 1)
 ending_well = Well True (Position x_tiles y_tiles)
@@ -105,7 +113,7 @@ setup = do
 	(water.colors) ~<- (lift $ mapRGB f 0 0 255)
 	(position.player) ~= getL (well_position) starting_well
 	-- Set the starting and the ending well
-	wells ~= (map (Well False) $ build_well_positions (mkStdGen 1) (getL well_position ending_well) $ [(getL well_position starting_well)])
+	wells ~= build_wells (mkStdGen 1) starting_well ending_well
 	return ()
 
 consume_move_thirst = (thirst.player) %= (+thirst_cost_move)
