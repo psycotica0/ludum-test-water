@@ -85,8 +85,9 @@ pos_reachable end = or . map (\i -> (distance i end < thirst_cost_fair))
 
 -- This function generates new random, unique, reachable positions until the end is reachable
 build_well_positions :: StdGen -> Position -> [Position] -> [Position]
-build_well_positions gen end cur_positions = if' (pos_reachable end cur_positions) cur_positions $ build_well_positions gen' end $ if' (pos_reachable new_pos cur_positions) (new_pos:cur_positions) cur_positions
+build_well_positions gen end cur_positions = if' (pos_reachable end cur_positions) cur_positions $ build_well_positions gen' end next_pos_set
 	where
+	next_pos_set = if' ((pos_reachable new_pos cur_positions) && (not $ elem new_pos cur_positions)) (new_pos:cur_positions) cur_positions
 	(new_pos, gen') = randomR (Position 1 1, Position x_tiles y_tiles) gen
 
 build_wells :: StdGen -> Well -> Well -> [Well]
