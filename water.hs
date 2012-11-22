@@ -70,6 +70,10 @@ standing_on_well = do
 	wells <- access (wells)
 	return $ or $ map (\well -> (getL found well) && ((getL well_position well) == pos)) wells
 
+-- Important Wells
+starting_well = Well True (Position 1 1)
+ending_well = Well True (Position x_tiles y_tiles)
+
 -- This sets up the initial stuff
 setup :: StateT GameState IO ()
 setup = do
@@ -80,7 +84,9 @@ setup = do
 	(sand.colors) ~<- (lift $ mapRGB f 255 169 95)
 	(player_color.colors) ~<- (lift $ mapRGB f 0 0 0)
 	(water.colors) ~<- (lift $ mapRGB f 0 0 255)
-	wells ~= [Well False (Position 5 5)]
+	(position.player) ~= getL (well_position) starting_well
+	-- Set the starting and the ending well
+	wells ~= [starting_well, ending_well]
 	return ()
 
 consume_move_thirst = (thirst.player) %= (+thirst_cost_move)
