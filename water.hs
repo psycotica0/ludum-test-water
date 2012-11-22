@@ -195,14 +195,23 @@ render = do
 	lift $ V.flip s
 
 -- This is the game_over loop
--- Right now it just quits
+-- Right now it paints the screen red, then waits to quit
 game_over = do
 	s <- access screen
 	f <- access format
 	over_color <- lift $ mapRGB f 255 0 0
 	lift $ fillRect s (Just playing_area) over_color
 	lift $ V.flip s
-	-- Might as well use the same event loop
+	lift wait_to_quit
+
+-- This is the You Win screen
+-- Right now it paints the screen white, then waits to quit
+win = do
+	s <- access screen
+	f <- access format
+	over_color <- lift $ mapRGB f 255 255 255
+	lift $ fillRect s (Just playing_area) over_color
+	lift $ V.flip s
 	lift wait_to_quit
 
 wait_to_quit :: IO ()
@@ -221,7 +230,8 @@ main_loop = do
 	event <- lift waitEvent
 	quit <- handle_event event
 	trst <- access (thirst.player)
+	p_pos <- access (position.player)
 	-- If the user quit, return. If thirst is over max, game_over, otherwise loop
-	select main_loop [(quit, return ()), (trst > thirst_max, game_over)]
+	select main_loop [(quit, return ()), (trst > thirst_max, game_over), ((getL well_position ending_well) == p_pos, win)]
 
 main = withInit [InitVideo, InitEventthread] $ (>>) (setCaption "Water Game" "") $ (flip runStateT) initial_game_state (setup >> main_loop)
